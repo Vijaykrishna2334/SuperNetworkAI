@@ -1,0 +1,142 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Profile fields from onboarding
+  profile       Profile?
+
+  // Connections
+  sentConnections     Connection[] @relation("ConnectionSender")
+  receivedConnections Connection[] @relation("ConnectionReceiver")
+
+  // Messages
+  sentMessages     Message[] @relation("MessageSender")
+  receivedMessages Message[] @relation("MessageReceiver")
+
+  // Auth
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Profile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Onboarding data
+  motivations   String   // What drives them
+  goals         String   // What they want to achieve
+  skills        String[] // Array of skills
+  experience    String   // Years/background
+  workingStyle  String   // Remote, hybrid, timezone preferences
+  intent        String   // Looking for: cofounder, teammate, client, etc.
+  links         String[] // Portfolio, LinkedIn, GitHub, etc.
+
+  // AI-generated fields
+  aiGeneratedProfile String?  // AI-generated summary
+  profileEdited      Boolean @default(false)
+
+  // Search & Discovery
+  searchable    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Connection {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  status     ConnectionStatus @default(PENDING)
+  message    String?  // Optional message with connection request
+
+  sender     User @relation("ConnectionSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User @relation("ConnectionReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([senderId, receiverId])
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  content    String
+  read       Boolean  @default(false)
+
+  sender     User @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+}
+
+model MatchFeedback {
+  id         String   @id @default(cuid())
+  userId     String
+  matchedUserId String
+  accepted   Boolean
+
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, matchedUserId])
+}
