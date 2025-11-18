@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { query } = body;
+    const { query, intentFilter } = body; // intentFilter: 'cofounder', 'teammate', 'client', etc.
 
     if (!query) {
       return NextResponse.json(
@@ -33,7 +33,25 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get all other users with profiles (excluding current user and already connected)
+    // Get blocked users (both directions)
+    const blockedUsers = await prisma.blockedUser.findMany({
+      where: {
+        OR: [
+          { blockerId: user.id },
+          { blockedId: user.id },
+        ],
+      },
+      select: {
+        blockerId: true,
+        blockedId: true,
+      },
+    });
+
+    const blockedUserIds = blockedUsers.map((block) =>
+      block.blockerId === user.id ? block.blockedId : block.blockerId
+    );
+
+    // Get all existing connections
     const existingConnections = await prisma.connection.findMany({
       where: {
         OR: [
@@ -51,14 +69,28 @@ export async function POST(request: Request) {
       conn.senderId === user.id ? conn.receiverId : conn.senderId
     );
 
-    const profiles = await prisma.profile.findMany({
-      where: {
-        userId: {
-          not: user.id,
-          notIn: connectedUserIds,
-        },
-        searchable: true,
+    // Combine excluded user IDs
+    const excludedUserIds = [...new Set([...connectedUserIds, ...blockedUserIds])];
+
+    // Build search filters
+    const searchFilters: any = {
+      userId: {
+        not: user.id,
+        notIn: excludedUserIds,
       },
+      searchable: true,
+      profileVisibility: {
+        in: ['PUBLIC'], // Only search public profiles
+      },
+    };
+
+    // Add intent filter if provided
+    if (intentFilter) {
+      searchFilters.intent = intentFilter;
+    }
+
+    const profiles = await prisma.profile.findMany({
+      where: searchFilters,
       include: {
         user: {
           select: {
@@ -100,7 +132,10 @@ export async function POST(request: Request) {
         const profile = profiles.find((p) => p.userId === match.userId);
         return {
           ...match,
-          user: profile?.user,
+          user: {
+            ...profile?.user,
+            email: profile?.showEmail ? profile?.user.email : undefined,
+          },
           profile: {
             motivations: profile?.motivations,
             goals: profile?.goals,
@@ -109,6 +144,10 @@ export async function POST(request: Request) {
             workingStyle: profile?.workingStyle,
             intent: profile?.intent,
             aiGeneratedProfile: profile?.aiGeneratedProfile,
+            availability: profile?.availability,
+            timezone: profile?.timezone,
+            interests: profile?.interests,
+            links: profile?.showLinks ? profile?.links : [],
           },
         };
       })

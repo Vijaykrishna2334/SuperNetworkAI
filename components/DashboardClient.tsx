@@ -29,12 +29,13 @@ interface Match {
 export default function DashboardClient({ user, profile, pendingRequests, connections }: any) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [intentFilter, setIntentFilter] = useState<string>('');
   const [matches, setMatches] = useState<Match[]>([]);
   const [searching, setSearching] = useState(false);
   const [activeTab, setActiveTab] = useState<'search' | 'connections' | 'requests'>('search');
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!searchQuery.trim()) return;
 
     setSearching(true);
@@ -42,7 +43,10 @@ export default function DashboardClient({ user, profile, pendingRequests, connec
       const response = await fetch('/api/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: searchQuery }),
+        body: JSON.stringify({
+          query: searchQuery,
+          intentFilter: intentFilter || undefined,
+        }),
       });
 
       const data = await response.json();
@@ -72,6 +76,27 @@ export default function DashboardClient({ user, profile, pendingRequests, connec
     }
   };
 
+  const handleBlock = async (userId: string) => {
+    if (!confirm('Are you sure you want to block this user? You will no longer see each other in search results.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/blocked', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blockedUserId: userId }),
+      });
+
+      if (response.ok) {
+        alert('User blocked successfully');
+        setMatches(matches.filter((m) => m.userId !== userId));
+      }
+    } catch (error) {
+      console.error('Block error:', error);
+    }
+  };
+
   const handleConnectionResponse = async (connectionId: string, status: 'ACCEPTED' | 'DECLINED') => {
     try {
       const response = await fetch(`/api/connections/${connectionId}`, {
@@ -96,6 +121,12 @@ export default function DashboardClient({ user, profile, pendingRequests, connec
             SuperNetwork AI
           </Link>
           <div className="flex items-center gap-4">
+            <Link
+              href="/settings"
+              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"
+            >
+              Settings
+            </Link>
             <span className="text-gray-700">{user.name}</span>
             <button
               onClick={() => signOut({ callbackUrl: '/' })}
@@ -157,8 +188,8 @@ export default function DashboardClient({ user, profile, pendingRequests, connec
 
         {activeTab === 'search' && (
           <div>
-            <form onSubmit={handleSearch} className="mb-8">
-              <div className="flex gap-4">
+            <form onSubmit={handleSearch} className="mb-4">
+              <div className="flex gap-4 mb-4">
                 <input
                   type="text"
                   value={searchQuery}
@@ -173,6 +204,25 @@ export default function DashboardClient({ user, profile, pendingRequests, connec
                 >
                   {searching ? 'Searching...' : 'Search'}
                 </button>
+              </div>
+              <div className="flex gap-4 items-center">
+                <label className="text-sm text-gray-700">Filter by role:</label>
+                <select
+                  value={intentFilter}
+                  onChange={(e) => {
+                    setIntentFilter(e.target.value);
+                    if (searchQuery) handleSearch();
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">All</option>
+                  <option value="cofounder">Cofounder</option>
+                  <option value="teammate">Teammate</option>
+                  <option value="client">Client</option>
+                  <option value="advisor">Advisor</option>
+                  <option value="investor">Investor</option>
+                  <option value="general">General Networking</option>
+                </select>
               </div>
             </form>
 
@@ -229,12 +279,21 @@ export default function DashboardClient({ user, profile, pendingRequests, connec
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => handleConnect(match.userId)}
-                    className="w-full px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-                  >
-                    Send Connection Request
-                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => handleConnect(match.userId)}
+                      className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                    >
+                      Send Connection Request
+                    </button>
+                    <button
+                      onClick={() => handleBlock(match.userId)}
+                      className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                      title="Block this user"
+                    >
+                      Block
+                    </button>
+                  </div>
                 </div>
               ))}
 

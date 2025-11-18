@@ -30,6 +30,10 @@ model User {
   sentMessages     Message[] @relation("MessageSender")
   receivedMessages Message[] @relation("MessageReceiver")
 
+  // Blocked users
+  blockedUsers     BlockedUser[] @relation("BlockerUser")
+  blockedByUsers   BlockedUser[] @relation("BlockedUser")
+
   // Auth
   accounts      Account[]
   sessions      Session[]
@@ -83,16 +87,33 @@ model Profile {
   workingStyle  String   // Remote, hybrid, timezone preferences
   intent        String   // Looking for: cofounder, teammate, client, etc.
   links         String[] // Portfolio, LinkedIn, GitHub, etc.
+  availability  String?  // Full-time, part-time, weekends, etc.
+  timezone      String?  // User's timezone
+  interests     String[] @default([]) // Additional interests
+
+  // CV/Resume
+  cvUrl         String?  // URL to uploaded CV/resume
+  cvParsedData  String?  // JSON string of parsed CV data
 
   // AI-generated fields
   aiGeneratedProfile String?  // AI-generated summary
   profileEdited      Boolean @default(false)
+  lastAiUpdate       DateTime? // Last time AI updated the profile
 
-  // Search & Discovery
-  searchable    Boolean @default(true)
+  // Privacy & Discovery
+  profileVisibility  ProfileVisibility @default(PUBLIC)
+  searchable         Boolean @default(true)
+  showEmail          Boolean @default(false)
+  showLinks          Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+enum ProfileVisibility {
+  PUBLIC    // Visible to everyone
+  PRIVATE   // Only visible to connections
+  HIDDEN    // Not searchable at all
 }
 
 model Connection {
@@ -139,4 +160,17 @@ model MatchFeedback {
   createdAt  DateTime @default(now())
 
   @@unique([userId, matchedUserId])
+}
+
+model BlockedUser {
+  id         String   @id @default(cuid())
+  blockerId  String   // User who blocked
+  blockedId  String   // User who is blocked
+
+  blocker    User @relation("BlockerUser", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked    User @relation("BlockedUser", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
 }

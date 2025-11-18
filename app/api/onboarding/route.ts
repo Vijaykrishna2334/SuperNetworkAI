@@ -20,6 +20,9 @@ export async function POST(request: Request) {
       workingStyle,
       intent,
       links,
+      availability,
+      timezone,
+      interests,
     } = body;
 
     // Validate required fields
@@ -52,7 +55,11 @@ export async function POST(request: Request) {
         workingStyle: workingStyle || '',
         intent,
         links: Array.isArray(links) ? links : (links ? links.split(',').map((l: string) => l.trim()) : []),
+        availability: availability || null,
+        timezone: timezone || null,
+        interests: Array.isArray(interests) ? interests : (interests ? interests.split(',').map((i: string) => i.trim()) : []),
         aiGeneratedProfile,
+        lastAiUpdate: new Date(),
       },
       create: {
         userId: user.id,
@@ -63,7 +70,11 @@ export async function POST(request: Request) {
         workingStyle: workingStyle || '',
         intent,
         links: Array.isArray(links) ? links : (links ? links.split(',').map((l: string) => l.trim()) : []),
+        availability: availability || null,
+        timezone: timezone || null,
+        interests: Array.isArray(interests) ? interests : (interests ? interests.split(',').map((i: string) => i.trim()) : []),
         aiGeneratedProfile,
+        lastAiUpdate: new Date(),
       },
     });
 

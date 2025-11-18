@@ -19,7 +19,13 @@ export default function Onboarding() {
     workingStyle: '',
     intent: '',
     links: '',
+    availability: '',
+    timezone: '',
+    interests: '',
   });
+
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [cvUploading, setCvUploading] = useState(false);
 
   const [aiProfile, setAiProfile] = useState('');
   const [showProfileEditor, setShowProfileEditor] = useState(false);
@@ -52,6 +58,41 @@ export default function Onboarding() {
       setError('Something went wrong');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setCvUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('cv', file);
+
+      const response = await fetch('/api/upload/cv', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.parsedData) {
+        // Auto-fill form with parsed data
+        setFormData((prev) => ({
+          ...prev,
+          skills: data.parsedData.skills?.join(', ') || prev.skills,
+          experience: data.parsedData.experience || prev.experience,
+          links: data.parsedData.links?.join(', ') || prev.links,
+          interests: data.parsedData.interests?.join(', ') || prev.interests,
+        }));
+        alert('CV parsed successfully! Your profile has been auto-filled.');
+      }
+    } catch (error) {
+      console.error('CV upload error:', error);
+      alert('Failed to parse CV. Please fill the form manually.');
+    } finally {
+      setCvUploading(false);
     }
   };
 
@@ -200,6 +241,68 @@ export default function Onboarding() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   placeholder="e.g., linkedin.com/in/yourname, github.com/username"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Availability
+                </label>
+                <select
+                  value={formData.availability}
+                  onChange={(e) => handleChange('availability', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                >
+                  <option value="">Select...</option>
+                  <option value="full-time">Full-time</option>
+                  <option value="part-time">Part-time</option>
+                  <option value="weekends">Weekends only</option>
+                  <option value="flexible">Flexible</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Timezone
+                </label>
+                <input
+                  type="text"
+                  value={formData.timezone}
+                  onChange={(e) => handleChange('timezone', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  placeholder="e.g., EST, PST, UTC+5"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Additional Interests (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  value={formData.interests}
+                  onChange={(e) => handleChange('interests', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  placeholder="e.g., AI/ML, Blockchain, Climate Tech"
+                />
+              </div>
+
+              <div className="border-t pt-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Or upload your CV/Resume (Optional)
+                </label>
+                <p className="text-xs text-gray-500 mb-2">
+                  We'll parse your CV to auto-fill your profile. Supported formats: PDF, DOC, DOCX, TXT
+                </p>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.txt"
+                  onChange={handleCVUpload}
+                  disabled={cvUploading}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+                {cvUploading && (
+                  <p className="text-sm text-indigo-600 mt-2">Parsing CV...</p>
+                )}
               </div>
 
               <button
