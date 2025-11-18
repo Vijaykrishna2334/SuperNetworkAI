@@ -1,7 +1,7 @@
 import { getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
-import DashboardClient from '@/components/DashboardClient';
+import DashboardClientEnhanced from '@/components/DashboardClientEnhanced';
 
 export default async function Dashboard() {
   const user = await getCurrentUser();
@@ -66,7 +66,7 @@ export default async function Dashboard() {
   });
 
   return (
-    <DashboardClient
+    <DashboardClientEnhanced
       user={user}
       profile={profile}
       pendingRequests={pendingRequests}
