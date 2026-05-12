@@ -1,3 +1,7 @@
+<div align="center">
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=160&section=header&text=SuperNetworkAI&fontSize=40&fontColor=fff&animation=twinkling&fontAlignY=36&desc=AI-Powered%20Networking%20Platform%20for%20Founders&descAlignY=58&descSize=15" width="100%"/>
+</div>
+
 # SuperNetwork AI - AI-Powered Founder Networking Platform
 
 An AI-powered networking platform that helps early-stage founders and indie builders quickly find aligned cofounders, teammates, or clients through intelligent matchmaking and natural language search.
